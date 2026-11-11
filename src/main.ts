@@ -4,11 +4,14 @@ import './style.css';
 
 import { createAnalyzer, type Analyzer } from './audio/analyze';
 import { MicError, openMic, type Mic, type MicErrorKind } from './audio/mic';
+import { APP_BUILD, APP_VERSION } from './build-info';
+import { pwa } from './pwa';
 import { TONE_SECONDS, playTone } from './audio/tone';
 import { A4_DEFAULT, A4_MAX, A4_MIN, clampA4, loadSettings, saveSettings } from './settings';
 import { STRINGS, midiToFrequency, noteName } from './tuner/notes';
 import { Tracker, type Reading, type TargetMode } from './tuner/tracker';
 import { GAUGE_MAX_CENTS, buildGauge } from './ui/gauge';
+import { setupUpdateUi } from './ui/update';
 
 type Phase = 'idle' | 'starting' | 'listening';
 
@@ -268,6 +271,8 @@ async function start(): Promise<void> {
   }
 
   phase = 'listening';
+  // 调音时不弹升级窗口，停下来再提示
+  pwa.setPromptBlocked(true);
   tracker.reset();
   reading = null;
   lastFrameMs = performance.now();
@@ -284,6 +289,7 @@ function stop(): void {
   tracker.reset();
   reading = null;
   phase = 'idle';
+  pwa.setPromptBlocked(false);
   render();
   scheduleLoop();
 }
@@ -356,6 +362,10 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-byId('version').textContent = `TunePick v${__APP_VERSION__}`;
+byId('version').textContent = `TunePick ${APP_VERSION}（构建 ${APP_BUILD}）`;
 gauge.setCents(needleCents);
 render();
+
+setupUpdateUi(pwa);
+// 等页面空闲再注册 Service Worker，不和首屏抢带宽
+pwa.startWhenIdle();

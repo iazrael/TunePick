@@ -35,10 +35,26 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+html,
 body {
+  height: 100%;
+}
+
+/*
+ * iOS 主屏应用里状态栏悬浮在画面上，这时 100% 和 100dvh 都比屏幕矮一截，只有 100lvh 是完整屏高。
+ * 只在主屏应用里用：Safari 标签页里 lvh 是工具栏收起后的高度，会超出可见区。
+ */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html,
+  body {
+    height: 100lvh;
+  }
+}
+
+body {
+  position: relative;
   display: grid;
   place-items: center;
-  min-height: 100dvh;
   margin: 0;
   background: var(--rosewood-900);
   color: var(--bone);
@@ -82,7 +98,7 @@ button:disabled {
   flex-direction: column;
   width: 100%;
   max-width: 30rem;
-  min-height: min(100dvh, 54rem);
+  min-height: min(100%, 54rem);
   padding: max(0.75rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
     max(1rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
 }
@@ -681,6 +697,72 @@ button:disabled {
 .version {
   color: var(--bone-dim);
   font-size: 0.8125rem;
+}
+
+/* ---------- 升级 ---------- */
+
+.update-subtitle {
+  margin: -0.5rem 0 0.75rem;
+  color: var(--bone-dim);
+  font-size: 0.8125rem;
+}
+
+.update-subtitle:empty {
+  display: none;
+}
+
+.update-notes {
+  max-height: 40dvh;
+  padding: 0.875rem 0;
+  overflow-y: auto;
+  border-top: 1px solid var(--rosewood-700);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.update-notes ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.update-notes li + li {
+  margin-top: 0.25rem;
+}
+
+.update-notes details {
+  margin-top: 0.875rem;
+  color: var(--bone-dim);
+  font-size: 0.8125rem;
+}
+
+.update-notes summary {
+  cursor: pointer;
+}
+
+.update-notes h3 {
+  margin: 0.75rem 0 0.25rem;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.update-progress {
+  padding-bottom: 0.875rem;
+  color: var(--amber);
+  font-size: 0.9375rem;
+}
+
+.toast {
+  position: absolute;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 1;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--rosewood-900);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
 }
 
 /* ---------- 宽屏：设置居中显示 ---------- */

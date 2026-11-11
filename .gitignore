@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dev-dist/
+# 构建计数器：每台机器各自递增，不入库
+.build-number
+.build-number.lock
 *.log
 .DS_Store
 .playwright-mcp/
