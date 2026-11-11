@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f1613" />
+    <meta name="description" content="TunePick 是打开就能用的网页吉他调音器：用麦克风听琴声，实时显示音名、频率和音准偏差。声音只在本机处理。" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <title>TunePick 吉他调音器</title>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main class="app" id="app" data-state="idle">
+      <header class="bar">
+        <h1 class="brand">TunePick</h1>
+        <button class="chip" id="open-settings" type="button" aria-haspopup="dialog">
+          A4 = <span id="a4-label">440</span> Hz
+        </button>
+      </header>
+
+      <section class="readout" aria-label="当前音高">
+        <p class="note">
+          <span class="note-letter" id="note-letter"></span>
+          <span class="note-marks">
+            <span class="note-sharp" id="note-sharp" hidden>♯</span>
+            <span class="note-octave" id="note-octave"></span>
+          </span>
+        </p>
+        <p class="frequency"><span id="frequency">–</span> Hz</p>
+      </section>
+
+      <section class="meter">
+        <svg class="gauge" id="gauge" role="img" aria-label="音准仪表盘：指针偏左表示偏低，偏右表示偏高"></svg>
+        <p class="cents"><span class="cents-value" id="cents"></span> 音分</p>
+        <p class="status" id="status" role="status"></p>
+      </section>
+
+      <section class="strings" aria-label="琴弦">
+        <div class="strings-head">
+          <button class="chip" id="auto" type="button" aria-pressed="true">自动识别</button>
+          <p class="strings-hint" id="strings-hint"></p>
+        </div>
+        <div class="fretboard" id="fretboard"></div>
+      </section>
+
+      <footer class="actions">
+        <p class="notice" id="notice" role="alert" hidden></p>
+        <button class="primary" id="toggle" type="button">开始调音</button>
+      </footer>
+    </main>
+
+    <dialog class="sheet" id="settings" aria-labelledby="settings-title">
+      <h2 class="sheet-title" id="settings-title">设置</h2>
+
+      <div class="field">
+        <div class="field-text">
+          <p class="field-name">基准音 A4</p>
+          <p class="field-help">通常保持 440 Hz。和乐队或伴奏用的基准不同时再改。</p>
+        </div>
+        <div class="stepper">
+          <button type="button" id="a4-down" aria-label="降低 1 Hz">−</button>
+          <output id="a4-value">440</output>
+          <button type="button" id="a4-up" aria-label="升高 1 Hz">+</button>
+        </div>
+      </div>
+      <button class="text-button" type="button" id="a4-reset">恢复 440 Hz</button>
+
+      <label class="field">
+        <span class="field-text">
+          <span class="field-name">点琴弦时播放参考音</span>
+          <span class="field-help">关闭后，点琴弦只选弦，不出声。</span>
+        </span>
+        <input class="switch" type="checkbox" role="switch" id="tone-on-tap" />
+      </label>
+
+      <p class="sheet-note">琴声只在这台设备上分析，不会上传，也不会保存。</p>
+
+      <form method="dialog" class="sheet-actions">
+        <span class="version" id="version"></span>
+        <button class="primary is-compact" type="submit">完成</button>
+      </form>
+    </dialog>
+  </body>
+</html>
