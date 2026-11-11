@@ -18,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # nexus-kit 是私有仓库，依赖走 SSH 引用；runner 没有 SSH 密钥，改写成 HTTPS，
+      # 用只读它的令牌拉取（secret NEXUS_KIT_TOKEN）
+      - name: 配置私有依赖的拉取认证
+        run: git config --global url."https://x-access-token:${{ secrets.NEXUS_KIT_TOKEN }}@github.com/".insteadOf "git@github.com:"
       # 版本取 package.json 的 packageManager 字段
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
