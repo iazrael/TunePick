@@ -12,6 +12,10 @@ export class MicError extends Error {
 
 export interface Mic {
   analyser: AnalyserNode;
+  /** 麦克风的名称。 */
+  label: string;
+  /** 浏览器实际采用的采集参数（采样率、降噪等开关），不含设备标识。给诊断记录用。 */
+  settings: MediaTrackSettings;
   stop(): void;
 }
 
@@ -63,9 +67,12 @@ export async function openMic(
 
   const [track] = stream.getAudioTracks();
   track.addEventListener('ended', onEnded);
+  const { deviceId: _deviceId, groupId: _groupId, ...settings } = track.getSettings();
 
   return {
     analyser,
+    label: track.label,
+    settings,
     stop() {
       track.removeEventListener('ended', onEnded);
       stream.getTracks().forEach((t) => t.stop());

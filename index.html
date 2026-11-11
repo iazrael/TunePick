@@ -89,7 +89,18 @@
         <button class="chip" type="button" id="force-update">更新到最新版</button>
       </div>
 
-      <p class="sheet-note">琴声只在这台设备上分析，不会上传，也不会保存。</p>
+      <div class="field">
+        <div class="field-text">
+          <p class="field-name">诊断文件</p>
+          <p class="field-help">读数不准时，拨几下弦再点导出，把文件发给开发者排查。</p>
+          <p class="field-help" id="export-diagnostics-result" role="status"></p>
+        </div>
+        <button class="chip" type="button" id="export-diagnostics">导出</button>
+      </div>
+
+      <p class="sheet-note">
+        琴声只在这台设备上分析，不会上传。诊断文件里有最近的检测记录和一小段琴声，只在你点「导出」时生成，交给你自己保管。
+      </p>
 
       <form method="dialog" class="sheet-actions">
         <button class="primary is-compact" type="submit">完成</button>

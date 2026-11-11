@@ -35,19 +35,27 @@ describe('createAnalyzer', () => {
       const analyzer = createAnalyzer(sampleRate);
       for (const frequency of [82.41, 329.63]) {
         const result = analyzer.analyze(sine(frequency, sampleRate, analyzer.frameSize, 0.1));
-        expect(result).not.toBeNull();
-        expect(Math.abs(1200 * Math.log2(result! / frequency))).toBeLessThan(1);
+        expect(result.frequency).not.toBeNull();
+        expect(Math.abs(1200 * Math.log2(result.frequency! / frequency))).toBeLessThan(1);
+        expect(result.raw!.frequency).toBe(result.frequency);
+        expect(result.rms).toBeCloseTo(0.1 / Math.SQRT2, 3);
       }
     });
   }
 
-  it('音量低于门限时返回 null', () => {
+  it('音量低于门限时没有频率，也不做基频检测，但仍然给出音量', () => {
     const analyzer = createAnalyzer(48000);
-    expect(analyzer.analyze(sine(110, 48000, analyzer.frameSize, 0.001))).toBeNull();
+    const result = analyzer.analyze(sine(110, 48000, analyzer.frameSize, 0.001));
+    expect(result.frequency).toBeNull();
+    expect(result.raw).toBeNull();
+    expect(result.rms).toBeCloseTo(0.001 / Math.SQRT2, 5);
   });
 
-  it('噪声返回 null', () => {
+  it('噪声没有可信频率，但保留没过清晰度门限的原始结果', () => {
     const analyzer = createAnalyzer(48000);
-    expect(analyzer.analyze(noise(analyzer.frameSize, 0.3))).toBeNull();
+    const result = analyzer.analyze(noise(analyzer.frameSize, 0.3));
+    expect(result.frequency).toBeNull();
+    expect(result.raw).not.toBeNull();
+    expect(result.raw!.clarity).toBeLessThan(0.9);
   });
 });

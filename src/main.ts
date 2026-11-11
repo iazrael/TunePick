@@ -5,11 +5,13 @@ import './style.css';
 import { createAnalyzer, type Analyzer } from './audio/analyze';
 import { MicError, openMic, type Mic, type MicErrorKind } from './audio/mic';
 import { APP_BUILD, APP_VERSION } from './build-info';
+import { Diagnostics } from './diagnostics';
 import { pwa } from './pwa';
 import { TONE_SECONDS, playTone } from './audio/tone';
 import { A4_DEFAULT, A4_MAX, A4_MIN, clampA4, loadSettings, saveSettings } from './settings';
 import { STRINGS, midiToFrequency, noteName } from './tuner/notes';
 import { Tracker, type Reading, type TargetMode } from './tuner/tracker';
+import { saveTextFile } from './ui/export';
 import { GAUGE_MAX_CENTS, buildGauge } from './ui/gauge';
 import { setupUpdateUi } from './ui/update';
 
@@ -55,11 +57,14 @@ const a4Down = byId<HTMLButtonElement>('a4-down');
 const a4Up = byId<HTMLButtonElement>('a4-up');
 const toneOnTap = byId<HTMLInputElement>('tone-on-tap');
 const settingsDialog = byId<HTMLDialogElement>('settings');
+const exportButton = byId<HTMLButtonElement>('export-diagnostics');
+const exportResult = byId('export-diagnostics-result');
 
 const gauge = buildGauge(document.getElementById('gauge') as unknown as SVGSVGElement);
 const settings = loadSettings();
 const tracker = new Tracker();
 tracker.setA4(settings.a4);
+const diagnostics = new Diagnostics();
 
 let phase: Phase = 'idle';
 let mode: TargetMode = 'auto';
@@ -199,7 +204,9 @@ function loop(nowMs: number): void {
       reading = null;
     } else {
       mic.analyser.getFloatTimeDomainData(frame);
-      reading = tracker.update(analyzer.analyze(frame), nowMs);
+      const analysis = analyzer.analyze(frame);
+      reading = tracker.update(analysis.frequency, nowMs);
+      diagnostics.record(nowMs, frame, analysis, reading);
     }
     render();
   }
@@ -271,6 +278,12 @@ async function start(): Promise<void> {
   }
 
   phase = 'listening';
+  diagnostics.beginSession(performance.now(), {
+    sampleRate: context.sampleRate,
+    frameSize: analyzer.frameSize,
+    micLabel: mic.label,
+    micSettings: mic.settings,
+  });
   // 调音时不弹升级窗口，停下来再提示
   pwa.setPromptBlocked(true);
   tracker.reset();
@@ -349,6 +362,29 @@ toneOnTap.addEventListener('change', () => {
   settings.toneOnTap = toneOnTap.checked;
   saveSettings(settings);
   render();
+});
+
+exportButton.addEventListener('click', async () => {
+  if (diagnostics.isEmpty()) {
+    exportResult.textContent = '还没有记录。先点「开始调音」拨几下弦，再来导出。';
+    return;
+  }
+  const exportedAt = new Date();
+  const report = {
+    format: 'tunepick-diagnostics/1',
+    exportedAt: exportedAt.toISOString(),
+    app: { version: APP_VERSION, build: APP_BUILD },
+    userAgent: navigator.userAgent,
+    standalone: matchMedia('(display-mode: standalone)').matches,
+    settings: { a4: settings.a4, mode: typeof mode === 'number' ? STRINGS[mode].label : mode },
+    ...diagnostics.report(),
+  };
+  // 文件名用本地时间，方便用户按钟点找文件
+  const local = new Date(exportedAt.getTime() - exportedAt.getTimezoneOffset() * 60_000);
+  const stamp = local.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+  const fileName = `tunepick-diagnostics-${stamp}.txt`;
+  const outcome = await saveTextFile(fileName, JSON.stringify(report));
+  exportResult.textContent = { shared: '已交给系统分享。', downloaded: `已保存为 ${fileName}。`, cancelled: '' }[outcome];
 });
 
 document.addEventListener('visibilitychange', () => {
