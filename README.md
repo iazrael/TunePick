@@ -51,3 +51,9 @@ docs/
 ## 发布
 
 推送正式版标签（例如 `v1.2.0`）会自动创建 GitHub Release 并更新线上页面。步骤见[版本与发布](docs/规范/版本与发布.md)。
+
+## 许可
+
+Copyright (C) 2026 Azrael
+
+TunePick 是自由软件，按 GNU 通用公共许可证第 2 版（GPL-2.0-only）发布，全文见 [LICENSE](LICENSE)。本软件不提供任何担保。
