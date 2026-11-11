@@ -1,0 +1,120 @@
+name: Release
+
+# 推送版本标签时触发。
+# 正式版（v1.2.0）：创建 GitHub Release，并更新 GitHub Pages。
+# 预发布版（v1.2.0-beta.0）：只创建标记为预发布的 GitHub Release。
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 构建
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: 核对版本号
+        id: meta
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "$version" != "$package_version" ]; then
+            echo "::error::标签 $GITHUB_REF_NAME 和 package.json 的版本 $package_version 不一致"
+            exit 1
+          fi
+          case "$version" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: 取出本版本的更新说明
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v header="## [$version]" '
+            index($0, "## [") == 1 { printing = index($0, header) == 1; next }
+            printing
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md 里没有 $version 的更新说明"
+            exit 1
+          fi
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: 打包构建产物
+        run: |
+          mkdir release
+          mv release-notes.md release/
+          cd dist
+          zip -r "../release/tunepick-${GITHUB_REF_NAME}.zip" .
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+
+      - uses: actions/upload-pages-artifact@v5
+        if: steps.meta.outputs.prerelease == 'false'
+        with:
+          path: dist
+
+  release:
+    name: 创建 Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" release/*.zip \
+            --title "TunePick $GITHUB_REF_NAME" \
+            --notes-file release/release-notes.md \
+            --verify-tag \
+            "${flags[@]}"
+
+  deploy:
+    name: 更新 GitHub Pages
+    needs: [build, release]
+    if: needs.build.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
